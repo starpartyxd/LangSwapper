@@ -1,6 +1,6 @@
 v1.0
 ------------
-[+] Initial release
+[+] Initial release.
 
 v1.1
 ------------
@@ -9,4 +9,8 @@ v1.1
 
 V1.2
 ------------
-[!] More bug fixes
+[!] More bug fixes.
+
+V1.3
+------------
+[~] Reverted it to only switch the language for consistency, instead of some input accepted with O and others with X.

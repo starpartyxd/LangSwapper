@@ -26,8 +26,7 @@
 // Defines for sceImposeSetLanguageMode.
 #define ASM_RANGE_MAX 							0x84
 #define ASM_LANGUAGE_INSTRUCTION				0xAD84033C		// sw $a0, 828($t4)
-#define ASM_BUTTON_INSTRUCTION					0xAD850340		// sw $a1, 832($t4)
-#define ASM_PATCHED_INSTRUCTION					0xAD8D0340		// sw $t5, 832($t4)
+#define ASM_PATCHED_INSTRUCTION					0xAD8D033C		// sw $t5, 832($t4)
 
 // Defines for sceUtilitySavedataInitStart.
 #define InitStart_OFFSET						0x18
@@ -38,7 +37,7 @@
 
 #define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
 
-PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 2);
+PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 3);
 
 SceUID thid;
 u32 _sceImposeSetLanguageMode;
@@ -61,20 +60,15 @@ void ClearCaches(void) {
  */
 void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 	u32 k1 = pspSdkSetK1(0);
-	int i, param_struct[2];
+	int i, param_struct;
 	int ptr = RAM_SEGMENT_ADDR;
 
-	// Get the language/button pointers and store them on the stack.
-	for (i = 0; i < 2; i++) {
-		_sw((a1 + 0x4) + (i * 4), ptr + (i * 0x4));
-	}
+	// Get the language pointer and store it in a unused location in user space.
+	_sw((a1 + 0x4), ptr);
 
-	// Accesses the final location of the structure in user space and
-	// patches the final values for language/button.
-	for (i = 0; i < 2; i++) {
-		param_struct[i] = _lw(ptr + (i * 0x4));
-		_sw(value, param_struct[i]);
-	}
+	// Accesses the final location of the structure in user space and patches the final values for language/button.
+	param_struct = _lw(ptr);
+	_sw(value, param_struct);
 
 	pspSdkSetK1(k1);
 
@@ -83,7 +77,7 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 }
 
 /**
- * This function cycles through memory to find out where the mode for the language and buttons are stored and patches it.
+ * This function cycles through memory to find out where the mode for the language is and changes it.
  *
  * @ASM_OLD - sw $a1, 832($t4).
  * @ASM_NEW - sw $t5, 832($t4).
@@ -91,10 +85,6 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
  * Up to 12 modes (0 to 11) exist for the language.
  * Setting it to 1 forces it to always be set based on the System Language that you've chosen in the XMB.
  *
- * Only two modes exist for the button mode (0 and 1).
- * 0 -> (X as BACK / O as ENTER).
- * 1 -> (X as ENTER /O as BACK).
- * We simply force the mode to always be set to 1, regardless.
  * sceImposeSetLanguageMode() already stores 1 in register $t5 already.
  * So I simply replace the original ASM intruction ("ASM_OLD"(See above)) with my own ("ASM_NEW"(See above)).
  *
@@ -103,8 +93,7 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 void patchHomeMenu(u32 addr) {
 	int i;
 	for (i = 0; i < ASM_RANGE_MAX; i += 4) {
-		if (_lw(addr + i) == ASM_LANGUAGE_INSTRUCTION
-				|| _lw(addr + i) == ASM_BUTTON_INSTRUCTION) {
+		if (_lw(addr + i) == ASM_LANGUAGE_INSTRUCTION) {
 			_sw(ASM_PATCHED_INSTRUCTION, addr + i);
 		}
 	}
