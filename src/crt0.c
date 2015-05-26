@@ -34,10 +34,11 @@
 
 #define NOP										0x00000000
 #define MAKE_CALL(f)							(0x0C000000 | (((u32)(f) >> 2) & 0x03ffffff))
+#define RAM_SEGMENT_ADDR						0x08800060
 
 #define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
 
-PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 0);
+PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 2);
 
 SceUID thid;
 u32 _sceImposeSetLanguageMode;
@@ -54,22 +55,24 @@ void ClearCaches(void) {
 
 /**
  * Patches sceUtilitySavedataInitStart by hooking into the function and changing the language parameter.
+ * Funny stuff happens, so we're using user space for some stuff or some games will break.
  *
  * Huzzah, double pointers~.
  */
 void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 	u32 k1 = pspSdkSetK1(0);
-	int i, param_struct[2], ptr[2];
+	int i, param_struct[2];
+	int ptr = RAM_SEGMENT_ADDR;
 
 	// Get the language/button pointers and store them on the stack.
 	for (i = 0; i < 2; i++) {
-		_sw((a1 + 0x4) + (i * 4), ptr[i]);
+		_sw((a1 + 0x4) + (i * 4), ptr + (i * 0x4));
 	}
 
 	// Accesses the final location of the structure in user space and
 	// patches the final values for language/button.
 	for (i = 0; i < 2; i++) {
-		param_struct[i] = _lw(ptr[i]);
+		param_struct[i] = _lw(ptr + (i * 0x4));
 		_sw(value, param_struct[i]);
 	}
 
