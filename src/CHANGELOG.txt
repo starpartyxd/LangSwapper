@@ -1,3 +1,8 @@
 v1.0
 ------------
 [+] Initial release
+
+v1.1
+------------
+[!] Fixed bug where the system language wasn't carried over to the SaveData Utility.
+[+] Added checks to verify that the language was grabbed from the system.
