@@ -26,16 +26,17 @@
 // Defines for sceImposeSetLanguageMode.
 #define ASM_RANGE_MAX 							0x84
 #define ASM_LANGUAGE_INSTRUCTION				0xAD84033C		// sw $a0, 828($t4)
-#define ASM_PATCHED_INSTRUCTION					0xAD8D033C		// sw $t5, 832($t4)
+#define ASM_PATCHED_INSTRUCTION					0xAD8D0340		// sw $t5, 832($t4)
 
 // Defines for sceUtilitySavedataInitStart.
 #define InitStart_OFFSET						0x18
 
-#define NOP										0x00000000
+// Define for sceUtilityGetSystemParamInt.
+#define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
+
+// Generic defines.
 #define MAKE_CALL(f)							(0x0C000000 | (((u32)(f) >> 2) & 0x03ffffff))
 #define RAM_SEGMENT_ADDR						0x08800060
-
-#define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
 
 PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 3);
 
@@ -66,7 +67,7 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 	// Get the language pointer and store it in a unused location in user space.
 	_sw((a1 + 0x4), ptr);
 
-	// Accesses the final location of the structure in user space and patches the final values for language/button.
+	// Accesses the final location of the structure in user space and patches the final values for language.
 	param_struct = _lw(ptr);
 	_sw(value, param_struct);
 
@@ -124,17 +125,18 @@ int mainThread(SceSize args, void *argp) {
 	while (_sceKernelGetSystemStatus() != 0x20000)
 	sceKernelDelayThread(1000);
 
-	// Find the function in kernel land and patch the Home menu language and button input.
+	// Get the system language beforehand. Calling it elsewhere is gonna cause you to have bad time.
+	// This should always pass.
+	ret = sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &value);
+	if(ret != 0) {
+		goto exit;
+	}
+
+	// Find the function in kernel land and patch the Home menu language.
 	_sceImposeSetLanguageMode = sctrlHENFindFunction("sceImpose_Driver",
 			"sceImpose", 0x36AA6E91);
 	if(_sceImposeSetLanguageMode) {
 		patchHomeMenu(_sceImposeSetLanguageMode);
-	}
-
-	// Get the system language beforehand. Calling it elsewhere is gonna cause you to have bad time.
-	ret = sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &value);
-	if(ret != 0) {
-		goto exit;
 	}
 
 	// Find the function in kernel land responsible for handling savedata.
