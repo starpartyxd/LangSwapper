@@ -7,10 +7,15 @@ v1.1
 [!] Fixed bug where the system language wasn't carried over to the SaveData Utility.
 [+] Added checks to verify that the language was grabbed from the system.
 
-V1.2
+v1.2
 ------------
 [!] More bug fixes.
 
-V1.3
+v1.3
 ------------
 [~] Reverted it to only switch the language for consistency, instead of some input accepted with O and others with X.
+
+v1.4
+------------
+[!] Revised patchHomeMenu. It now patches a different set of instructions to attain the desired result.
+[!] Bug fixes and compatibility improvements.

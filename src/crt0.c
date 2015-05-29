@@ -25,8 +25,9 @@
 
 // Defines for sceImposeSetLanguageMode.
 #define ASM_RANGE_MAX 							0x84
-#define ASM_LANGUAGE_INSTRUCTION				0xAD84033C		// sw $a0, 828($t4)
-#define ASM_PATCHED_INSTRUCTION					0xAD8D0340		// sw $t5, 832($t4)
+#define ASM_LANGUAGE_INSTRUCTION 				0x2C83000C 		// sltiu $v1, $a0, 12
+#define ASM_PATCHED_INSTRUCTION					0x24040001 		// addiu $a0, zero, $0001
+#define ASM_PATCHED_INSTRUCTION_BRANCH			0x10000004 		// beq zero, zero, 0x4
 
 // Defines for sceUtilitySavedataInitStart.
 #define InitStart_OFFSET						0x18
@@ -36,14 +37,15 @@
 
 // Generic defines.
 #define MAKE_CALL(f)							(0x0C000000 | (((u32)(f) >> 2) & 0x03ffffff))
-#define RAM_SEGMENT_ADDR						0x08800060
+#define NOP										0x00000000
+#define SCRATCH_SEGMENT_ADDR					0x00010000
 
-PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 3);
+PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 4);
 
 SceUID thid;
 u32 _sceImposeSetLanguageMode;
 u32 _sceUtilitySavedataInitStart, sd_sub;
-int ret, value;
+int value;
 
 /**
  * Clears the data and instruction cache.
@@ -62,7 +64,7 @@ void ClearCaches(void) {
 void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 	u32 k1 = pspSdkSetK1(0);
 	int i, param_struct;
-	int ptr = RAM_SEGMENT_ADDR;
+	int ptr = SCRATCH_SEGMENT_ADDR;
 
 	// Get the language pointer and store it in a unused location in user space.
 	_sw((a1 + 0x4), ptr);
@@ -78,16 +80,16 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 }
 
 /**
- * This function cycles through memory to find out where the mode for the language is and changes it.
+ * This function searches kernel memory and patches a0 and forcely fully changes it to 1.
  *
- * @ASM_OLD - sw $a1, 832($t4).
- * @ASM_NEW - sw $t5, 832($t4).
+ * @ASM_OLD - sltiu $v1, $a0, 12.
+ * @ASM_NEW - addiu $a0, zero, $0001
  *
  * Up to 12 modes (0 to 11) exist for the language.
  * Setting it to 1 forces it to always be set based on the System Language that you've chosen in the XMB.
  *
- * sceImposeSetLanguageMode() already stores 1 in register $t5 already.
- * So I simply replace the original ASM intruction ("ASM_OLD"(See above)) with my own ("ASM_NEW"(See above)).
+ * sceImposeSetLanguageMode() already stores 1 in register $t5 for 6.60, but it differs per firmware.
+ * Instead of using $t5, I simply replace the original ASM intruction ("ASM_OLD"(See above)) with my own ("ASM_NEW"(See above)).
  *
  * TLDR: The function below performs voodoo magic, which does things in memory. :)
  */
@@ -95,7 +97,8 @@ void patchHomeMenu(u32 addr) {
 	int i;
 	for (i = 0; i < ASM_RANGE_MAX; i += 4) {
 		if (_lw(addr + i) == ASM_LANGUAGE_INSTRUCTION) {
-			_sw(ASM_PATCHED_INSTRUCTION, addr + i);
+			_sw(ASM_PATCHED_INSTRUCTION, addr);
+			_sw(ASM_PATCHED_INSTRUCTION_BRANCH, addr + 0x4);
 		}
 	}
 }
@@ -105,7 +108,6 @@ void patchHomeMenu(u32 addr) {
  * Once the patching finishes it continues to run normally.
  */
 void patchSaveData(u32 addr) {
-	//get the sub address called by sceUtilitySavedataInitStart
 	sd_sub = ((*(u32*) (addr + InitStart_OFFSET) & 0x03FFFFFF) << 2)
 			| 0x80000000;
 	_sw(MAKE_CALL(patched_sceUtilitySavedataInitStart),
@@ -116,36 +118,27 @@ void patchSaveData(u32 addr) {
  * Main function that does the black magic.
  */
 int mainThread(SceSize args, void *argp) {
-
-	// Find the function responsible for the booting status of the system.
-	int (*_sceKernelGetSystemStatus)(
-			void) = (void *)sctrlHENFindFunction("sceSystemMemoryManager", "SysMemForKernel", 0x36C503A9);
-
-	//wait until the system returns booted status
-	while (_sceKernelGetSystemStatus() != 0x20000)
-	sceKernelDelayThread(1000);
-
-	// Get the system language beforehand. Calling it elsewhere is gonna cause you to have bad time.
-	// This should always pass.
-	ret = sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &value);
-	if(ret != 0) {
-		goto exit;
-	}
+	s32 ret;
 
 	// Find the function in kernel land and patch the Home menu language.
 	_sceImposeSetLanguageMode = sctrlHENFindFunction("sceImpose_Driver",
 			"sceImpose", 0x36AA6E91);
-	if(_sceImposeSetLanguageMode) {
+	if (_sceImposeSetLanguageMode) {
 		patchHomeMenu(_sceImposeSetLanguageMode);
 	}
 
+	// Get the system language beforehand. This should always pass.
+	while (sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &value)
+			!= 0)
+		sceKernelDelayThread(100);
+
 	// Find the function in kernel land responsible for handling savedata.
-	_sceUtilitySavedataInitStart = sctrlHENFindFunction("sceUtility_Driver", "sceUtility", 0x50C4CD57);
-	if(_sceUtilitySavedataInitStart) {
+	_sceUtilitySavedataInitStart = sctrlHENFindFunction("sceUtility_Driver",
+			"sceUtility", 0x50C4CD57);
+	if (_sceUtilitySavedataInitStart) {
 		patchSaveData(_sceUtilitySavedataInitStart);
 	}
 
-	exit:
 	ClearCaches();
 	return 0;
 }
