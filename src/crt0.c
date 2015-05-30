@@ -26,8 +26,8 @@
 // Defines for sceImposeSetLanguageMode.
 #define ASM_RANGE_MAX 							0x84
 #define ASM_LANGUAGE_INSTRUCTION 				0x2C83000C 		// sltiu $v1, $a0, 12
-#define ASM_PATCHED_INSTRUCTION					0x24040001 		// addiu $a0, zero, $0001
-#define ASM_PATCHED_INSTRUCTION_BRANCH			0x10000004 		// beq zero, zero, 0x4
+#define ASM_LANGUAGE_PATCHED_INSTRUCTION		0x24040001 		// addiu $a0, zero, $0001
+#define ASM_LANGUAGE_PATCHED_INSTRUCTION_BRANCH	0x10000004 		// beq zero, zero, 0x4
 
 // Defines for sceUtilitySavedataInitStart.
 #define InitStart_OFFSET						0x18
@@ -66,10 +66,10 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 	int i, param_struct;
 	int ptr = SCRATCH_SEGMENT_ADDR;
 
-	// Get the language pointer and store it in a unused location in user space.
+	// Get the language pointer and store it in a unused location in scratchpad memory.
 	_sw((a1 + 0x4), ptr);
 
-	// Accesses the final location of the structure in user space and patches the final values for language.
+	// Accesses the final location of the structure in scratchpad memory and patches the final values for language.
 	param_struct = _lw(ptr);
 	_sw(value, param_struct);
 
@@ -97,8 +97,8 @@ void patchHomeMenu(u32 addr) {
 	int i;
 	for (i = 0; i < ASM_RANGE_MAX; i += 4) {
 		if (_lw(addr + i) == ASM_LANGUAGE_INSTRUCTION) {
-			_sw(ASM_PATCHED_INSTRUCTION, addr);
-			_sw(ASM_PATCHED_INSTRUCTION_BRANCH, addr + 0x4);
+			_sw(ASM_LANGUAGE_PATCHED_INSTRUCTION, addr);
+			_sw(ASM_LANGUAGE_DPATCHED_INSTRUCTION_BRANCH, addr + 0x4);
 		}
 	}
 }
