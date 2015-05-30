@@ -23,6 +23,11 @@
 #include <psputility_sysparam.h>
 #include <pspctrl.h>
 
+// Generic defines.
+#define MAKE_CALL(f)							(0x0C000000 | (((u32)(f) >> 2) & 0x03ffffff))
+#define NOP										0x00000000
+#define SCRATCH_SEGMENT_ADDR					0x00010000
+
 // Defines for sceImposeSetLanguageMode.
 #define ASM_RANGE_MAX 							0x84
 #define ASM_LANGUAGE_INSTRUCTION 				0x2C83000C 		// sltiu $v1, $a0, 12
@@ -34,11 +39,6 @@
 
 // Define for sceUtilityGetSystemParamInt.
 #define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
-
-// Generic defines.
-#define MAKE_CALL(f)							(0x0C000000 | (((u32)(f) >> 2) & 0x03ffffff))
-#define NOP										0x00000000
-#define SCRATCH_SEGMENT_ADDR					0x00010000
 
 PSP_MODULE_INFO("LangSwapper", PSP_MODULE_KERNEL, 1, 4);
 
@@ -98,7 +98,7 @@ void patchHomeMenu(u32 addr) {
 	for (i = 0; i < ASM_RANGE_MAX; i += 4) {
 		if (_lw(addr + i) == ASM_LANGUAGE_INSTRUCTION) {
 			_sw(ASM_LANGUAGE_PATCHED_INSTRUCTION, addr);
-			_sw(ASM_LANGUAGE_DPATCHED_INSTRUCTION_BRANCH, addr + 0x4);
+			_sw(ASM_LANGUAGE_PATCHED_INSTRUCTION_BRANCH, addr + 0x4);
 		}
 	}
 }
