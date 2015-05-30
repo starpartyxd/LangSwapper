@@ -34,7 +34,7 @@
 #define ASM_LANGUAGE_PATCHED_INSTRUCTION		0x24040001 		// addiu $a0, zero, $0001
 #define ASM_LANGUAGE_PATCHED_INSTRUCTION_BRANCH	0x10000004 		// beq zero, zero, 0x4
 
-// Defines for sceUtilitySavedataInitStart.
+// Define for sceUtilitySavedataInitStart.
 #define InitStart_OFFSET						0x18
 
 // Define for sceUtilityGetSystemParamInt.
