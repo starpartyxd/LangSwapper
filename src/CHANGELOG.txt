@@ -24,3 +24,7 @@ v1.5
 ------------
 [!] Fixed a bug where the HOME menu didn't show the system language.
 [+] Added patch for autoloading in the SaveData Utility.
+
+v1.6
+------------
+[!] Fixed a bug where the wrong offset was used for sceUtilityMsgDialogInitStart.
