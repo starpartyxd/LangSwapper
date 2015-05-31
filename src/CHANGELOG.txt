@@ -19,3 +19,8 @@ v1.4
 ------------
 [!] Revised patchHomeMenu. It now patches a different set of instructions to attain the desired result.
 [!] Bug fixes and compatibility improvements.
+
+v1.5
+------------
+[!] Fixed a bug where the HOME menu didn't show the system language.
+[+] Added patch for autoloading in the SaveData Utility.
