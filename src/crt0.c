@@ -34,9 +34,12 @@
 #define ASM_LANGUAGE_PATCHED_INSTRUCTION		0x24040001 		// addiu $a0, zero, $0001
 #define ASM_LANGUAGE_PATCHED_INSTRUCTION_BRANCH	0x10000004 		// beq zero, zero, 0x4
 
-// Define for sceUtilitySavedataInitStart.
+// Defines for sceUtilitySavedataInitStart.
 #define SavedataInitStart_OFFSET				0x18
 #define MsgDialogInitStart_OFFSET				0x18
+
+// Define for sceCtrlPeekBufferPositive.
+#define PeekBufferPositive_OFFSET				0xC
 
 // Define for sceUtilityGetSystemParamInt.
 #define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
@@ -96,7 +99,7 @@ void patched_sceUtilitySavedataInitStart(u32 a0, u32 a1) {
 void patchHomeMenu(u32 addr) {
 	int i;
 	for (i = 0; i < ASM_RANGE_MAX; i += 4) {
-		if (_lw(addr +	 i) == ASM_LANGUAGE_INSTRUCTION) {
+		if (_lw(addr + i) == ASM_LANGUAGE_INSTRUCTION) {
 			_sw(ASM_LANGUAGE_PATCHED_INSTRUCTION, addr + i);
 			_sb(value, addr + i);
 			_sw(ASM_LANGUAGE_PATCHED_INSTRUCTION_BRANCH, (addr + i) + 0x4);
@@ -117,8 +120,6 @@ void patchSaveData(u32 addr, u32 offset) {
  * Main function that does the black magic.
  */
 int mainThread(SceSize args, void *argp) {
-	s32 ret;
-
 	// Get the system language beforehand. This should always pass.
 	while (sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &value)
 			!= 0)
