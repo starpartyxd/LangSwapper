@@ -38,9 +38,6 @@
 #define SavedataInitStart_OFFSET				0x18
 #define MsgDialogInitStart_OFFSET				0x18
 
-// Define for sceCtrlPeekBufferPositive.
-#define PeekBufferPositive_OFFSET				0xC
-
 // Define for sceUtilityGetSystemParamInt.
 #define PSP_SYSTEMPARAM_ID_INT_LANGUAGE         8
 
